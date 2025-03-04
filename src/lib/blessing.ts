@@ -7,6 +7,7 @@ export interface BlessingParams {
   weather?: string;
   name?: string;
   age?: string;
+  zodiac?: string;
   mbtiType?: string;
   relationship?: string;
 }
@@ -22,14 +23,15 @@ const buildPrompt = (params: BlessingParams): string => {
 - 温度：${params.temp}℃
 - 天气状况：${params.weather}
 要求：
-1. 结合气象特征（如${params.weather?.includes("雨") ? "雨水滋润" : "阳光温暖"}）
+1. 结合气象特征
 2. 使用口语化表达，不超过50字
-3. 包含积极向上的情感元素
+3. 包含关心、祝福和情切的情感元素
 4. 不要有多余的解释`,
 
     birthday: `为以下对象创作生日祝福：
 - 姓名：${params.name}
 - 年龄：${params.age || "未知"}
+- 生肖：${params.zodiac || "未知"}
 要求：
 1. 使用${params.age ? "符合年龄阶段" : "普适"}的表达方式
 2. 包含至少1个相关emoji
@@ -53,12 +55,6 @@ export const generateBlessing = async (
   params: BlessingParams
 ): Promise<string> => {
   const prompt = buildPrompt(params);
-
-  console.log(
-    process.env.DEEPSEEK_API_KEY,
-    prompt,
-    "process.env.DEEPSEEK_API_KEY"
-  );
 
   try {
     const response = await axios.post(
