@@ -1,4 +1,7 @@
 // src/lib/blessing.ts
+import OpenAI from "openai";
+import { Stream } from "openai/stream";
+
 export type ScenarioType = "weather" | "birthday" | "mbti";
 
 export interface BlessingParams {
@@ -13,6 +16,12 @@ export interface BlessingParams {
 }
 
 import axios from "axios";
+
+const openai = new OpenAI({
+  apiKey: process.env.DEEPSEEK_API_KEY,
+  baseURL: "https://api.deepseek.com/v1", // DeepSeek 专用端点
+  timeout: 3000000, // 30秒超时
+});
 
 const buildPrompt = (params: BlessingParams): string => {
   const { scenario } = params;
@@ -51,39 +60,32 @@ const buildPrompt = (params: BlessingParams): string => {
   return prompts[scenario];
 };
 
-export const generateBlessing = async (
+export async function* generateBlessingStream(
   params: BlessingParams
-): Promise<string> => {
+): AsyncGenerator<string> {
   const prompt = buildPrompt(params);
 
   try {
-    const response = await axios.post(
-      "https://api.deepseek.com/v1/chat/completions",
-      {
-        model: "deepseek-reasoner",
-        messages: [
-          {
-            role: "system",
-            content:
-              "你是有10年经验的祝福语创作专家，擅长生成温暖且有创意的祝福内容",
-          },
-          { role: "user", content: prompt },
-        ],
-        stream: false,
-        temperature: 1.5,
-        // max_tokens: 200,
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+    const stream = (await openai.chat.completions.create({
+      model: "deepseek-reasoner",
+      messages: [
+        {
+          role: "system",
+          content:
+            "你是有10年经验的祝福语创作专家，擅长生成温暖且有创意的祝福内容",
         },
-        timeout: 3000000, // 3000秒超时
-      }
-    );
-    console.log(response, "response");
+        { role: "user", content: prompt },
+      ],
+      temperature: 1.5,
+      stream: true, // 启用流式传输
+    })) as Stream<OpenAI.Chat.Completions.ChatCompletionChunk>;
 
-    return response?.data?.choices[0]?.message?.content;
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || "";
+      if (content) {
+        yield content; // 逐步生成内容
+      }
+    }
   } catch (error) {
     let errorMessage = "生成失败：";
     console.log(error, "error");
@@ -98,5 +100,22 @@ export const generateBlessing = async (
     }
 
     throw new Error(errorMessage);
+  }
+}
+
+// 兼容旧版非流式调用（可选）
+export const generateBlessing = async (
+  params: BlessingParams
+): Promise<string> => {
+  let fullContent = "";
+
+  try {
+    const stream = generateBlessingStream(params);
+    for await (const chunk of stream) {
+      fullContent += chunk;
+    }
+    return fullContent;
+  } catch (error) {
+    throw error instanceof Error ? error : new Error(String(error));
   }
 };

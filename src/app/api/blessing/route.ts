@@ -1,9 +1,19 @@
 // src/app/api/blessing/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { generateBlessing, BlessingParams, ScenarioType } from "@/lib/blessing";
+import {
+  BlessingParams,
+  ScenarioType,
+  generateBlessingStream,
+} from "@/lib/blessing";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+
+  const headers = new Headers({
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
 
   // 参数解析
   const scenario = searchParams.get("type") as ScenarioType;
@@ -45,24 +55,32 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  try {
-    const content = await generateBlessing(params);
-    return NextResponse.json({
-      success: true,
-      data: {
-        type: scenario,
-        content,
-        generatedAt: new Date().toISOString(),
+  // const stream = generateBlessingStream(params);
+
+  const encoder = new TextEncoder();
+
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        // 心跳机制
+        const heartbeatTimer = setInterval(() => {
+          controller.enqueue(new TextEncoder().encode(":\n\n"));
+        }, 15000);
+
+        try {
+          for await (const chunk of generateBlessingStream(params)) {
+            const eventData = `data: ${JSON.stringify({ text: chunk })}\n\n`;
+            controller.enqueue(encoder.encode(eventData));
+          }
+        } catch (error) {
+          const errorMsg = `event: error\ndata: ${error?.message}\n\n`;
+          controller.enqueue(encoder.encode(errorMsg));
+        } finally {
+          clearInterval(heartbeatTimer);
+          controller.close();
+        }
       },
-    });
-  } catch (error) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "生成失败",
-        code: "DEEPSEEK_API_ERROR",
-      },
-      { status: 500 }
-    );
-  }
+    }),
+    { headers }
+  );
 }
