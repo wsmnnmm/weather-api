@@ -65,13 +65,14 @@ export async function GET(request: NextRequest) {
         // 心跳机制
         const heartbeatTimer = setInterval(() => {
           controller.enqueue(new TextEncoder().encode(":\n\n"));
-        }, 15000);
+        }, 5000);
 
         try {
           for await (const chunk of generateBlessingStream(params)) {
             const eventData = `data: ${JSON.stringify({ text: chunk })}\n\n`;
             controller.enqueue(encoder.encode(eventData));
           }
+          controller.enqueue(encoder.encode("data: { text: [DONE] } \n\n"));
         } catch (error) {
           const errorMsg = `event: error\ndata: ${error?.message}\n\n`;
           controller.enqueue(encoder.encode(errorMsg));

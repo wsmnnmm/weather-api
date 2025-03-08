@@ -35,7 +35,7 @@ const buildPrompt = (params: BlessingParams): string => {
 1. 结合气象特征
 2. 使用口语化表达，不超过50字
 3. 包含关心、祝福和情切的情感元素
-4. 不要有多余的解释`,
+4. 不要有多余的解释和解析`,
 
     birthday: `为以下对象创作生日祝福：
 - 姓名：${params.name}
@@ -45,7 +45,7 @@ const buildPrompt = (params: BlessingParams): string => {
 1. 使用${params.age ? "符合年龄阶段" : "普适"}的表达方式
 2. 包含至少1个相关emoji
 3. 突出祝福重点
-4. 不要有多余的解释`,
+4. 不要有多余的解释和解析`,
 
     mbti: `根据MBTI性格类型生成专属祝福：
 - 类型：${params.mbtiType}
@@ -54,7 +54,7 @@ const buildPrompt = (params: BlessingParams): string => {
 1. 结合该类型认知功能特点
 2. 使用对应的比喻手法（如NT型用科技类比）
 3. 保持亲切自然的口吻
-4. 不要有多余的解释`,
+4. 不要有多余的解释和解析`,
   };
 
   return prompts[scenario];
