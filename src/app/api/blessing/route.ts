@@ -74,7 +74,18 @@ export async function GET(request: NextRequest) {
           }
           controller.enqueue(encoder.encode("data: { text: [DONE] } \n\n"));
         } catch (error) {
-          const errorMsg = `event: error\ndata: ${error?.message}\n\n`;
+          const message =
+            error instanceof Error
+              ? error.message
+              : typeof error === "string"
+              ? error
+              : "Unknown error";
+
+          // 标准化错误数据格式
+          const errorMsg = `event: error\ndata: ${JSON.stringify({
+            message,
+          })}\n\n`;
+          controller.enqueue(encoder.encode(errorMsg));
           controller.enqueue(encoder.encode(errorMsg));
         } finally {
           clearInterval(heartbeatTimer);
