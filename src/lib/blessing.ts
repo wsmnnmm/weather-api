@@ -1,6 +1,5 @@
 // src/lib/blessing.ts
 import OpenAI from "openai";
-import { Stream } from "openai/stream";
 
 export type ScenarioType = "weather" | "birthday" | "mbti";
 
@@ -78,7 +77,7 @@ export async function* generateBlessingStream(
       ],
       temperature: 1.5,
       stream: true, // 启用流式传输
-    })) as Stream<OpenAI.Chat.Completions.ChatCompletionChunk>;
+    })) as AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
 
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || "";
